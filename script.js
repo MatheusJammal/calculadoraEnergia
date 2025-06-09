@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const fatorPerdasInput = document.getElementById('fatorPerdas');
     const taxaJurosInput = document.getElementById('taxaJuros');
     const prazoFinanciamentoInput = document.getElementById('prazoFinanciamento');
+    const taxaInflacaoEnergiaInput = document.getElementById('taxaInflacaoEnergia');
+
     const calcularBtn = document.getElementById('calcularBtn');
     const resultadosDiv = document.getElementById('resultados');
     const errorMessageDiv = document.getElementById('errorMessage');
@@ -27,10 +29,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const outGastoTotal = document.getElementById('outGastoTotal');
     const outEconomiaImediata = document.getElementById('outEconomiaImediata');
     const outPercentualEconomia = document.getElementById('outPercentualEconomia');
+    const outEconomiaTotalFinanciamento = document.getElementById('outEconomiaTotalFinanciamento');
+    const outEconomiaTotalVidaUtil = document.getElementById('outEconomiaTotalVidaUtil');
 
     // --- Constantes do Sistema Solar ---
-    const MODULO_POWER_WP = 570; // Potência do módulo em Watts-pico
-    const DIAS_NO_MES = 30.4; // Média de dias no mês
+    const MODULO_POWER_WP = 570;
+    const DIAS_NO_MES = 30.4;
+    const VIDA_UTIL_ANOS = 25;
+    const DEGRADACAO_ANUAL_PAINEL = 0.005; // 0.5% ao ano
 
     // --- Dados de HSP por Localização (Horas de Sol Pico/dia) ---
     const hspData = {
@@ -85,19 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Adiciona o evento de click ao botão de calcular
     calcularBtn.addEventListener('click', calcularEconomia);
 
-    // Adiciona o evento 'keydown' para cada input numérico
-    // Isso é útil para formatar o valor na entrada
-    document.querySelectorAll('.numerical-input').forEach(input => {
-        input.addEventListener('input', (event) => {
-            // Remove qualquer caracter não numérico ou ponto/vírgula extra
-            let value = event.target.value.replace(/[^0-9,.]/g, '');
-            // Substitui vírgula por ponto para cálculo
-            value = value.replace(',', '.');
-            event.target.value = value;
-        });
-    });
-
-
     // --- Função Principal de Cálculo ---
     function calcularEconomia() {
         // Esconde mensagens de erro e resultados anteriores
@@ -106,26 +99,29 @@ document.addEventListener('DOMContentLoaded', () => {
         errorTextSpan.textContent = '';
 
         // 1. Coletar e Validar Inputs
-        const consumoMensal = parseFloat(consumoMensalInput.value);
-        const valorKwh = parseFloat(valorKwhInput.value);
-        const custoDisponibilidade = parseFloat(custoDisponibilidadeInput.value);
+        // Substitui vírgula por ponto para garantir que parseFloat funcione corretamente
+        const consumoMensal = parseFloat(consumoMensalInput.value.replace(',', '.'));
+        const valorKwh = parseFloat(valorKwhInput.value.replace(',', '.'));
+        const custoDisponibilidade = parseFloat(custoDisponibilidadeInput.value.replace(',', '.'));
         const localizacao = localizacaoSelect.value;
-        const hspManual = hspManualInput.value; // Pega o valor bruto
-        const potenciaDesejadaPercent = parseFloat(potenciaDesejadaInput.value);
-        const custoKwP = parseFloat(custoKwPInput.value);
-        const fatorPerdasPercent = parseFloat(fatorPerdasInput.value);
-        const taxaJurosMensal = parseFloat(taxaJurosInput.value);
-        const prazoFinanciamento = parseInt(prazoFinanciamentoInput.value);
+        const hspManual = hspManualInput.value.replace(',', '.');
+        const potenciaDesejadaPercent = parseFloat(potenciaDesejadaInput.value.replace(',', '.'));
+        const custoKwP = parseFloat(custoKwPInput.value.replace(',', '.'));
+        const fatorPerdasPercent = parseFloat(fatorPerdasInput.value.replace(',', '.'));
+        const taxaJurosMensal = parseFloat(taxaJurosInput.value.replace(',', '.'));
+        const prazoFinanciamento = parseInt(prazoFinanciamentoInput.value.replace(',', '.'));
+        const taxaInflacaoEnergiaAnual = parseFloat(taxaInflacaoEnergiaInput.value.replace(',', '.'));
 
         // Validação básica
         if (isNaN(consumoMensal) || consumoMensal <= 0 ||
             isNaN(valorKwh) || valorKwh <= 0 ||
-            isNaN(custoDisponibilidade) || custoDisponibilidade < 0 || // Pode ser zero, mas não negativo
+            isNaN(custoDisponibilidade) || custoDisponibilidade < 0 ||
             isNaN(potenciaDesejadaPercent) || potenciaDesejadaPercent <= 0 || potenciaDesejadaPercent > 100 ||
             isNaN(custoKwP) || custoKwP <= 0 ||
-            isNaN(fatorPerdasPercent) || fatorPerdasPercent < 0 || fatorPerdasPercent >= 100 || // Perdas não podem ser 100% ou mais
+            isNaN(fatorPerdasPercent) || fatorPerdasPercent < 0 || fatorPerdasPercent >= 100 ||
             isNaN(taxaJurosMensal) || taxaJurosMensal < 0 ||
-            isNaN(prazoFinanciamento) || prazoFinanciamento <= 0) {
+            isNaN(prazoFinanciamento) || prazoFinanciamento <= 0 ||
+            isNaN(taxaInflacaoEnergiaAnual) || taxaInflacaoEnergiaAnual < 0) {
             errorMessageDiv.classList.remove('hidden');
             errorTextSpan.textContent = 'Por favor, preencha todos os campos com valores válidos e positivos.';
             return;
@@ -141,65 +137,94 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         // Converter percentuais para decimais
-        const fatorPerdasDecimal = (100 - fatorPerdasPercent) / 100; // Ex: 20% perda = 0.8 de eficiência
+        const fatorPerdasDecimal = (100 - fatorPerdasPercent) / 100;
         const potenciaDesejadaDecimal = potenciaDesejadaPercent / 100;
+        const taxaInflacaoEnergiaMensal = Math.pow(1 + (taxaInflacaoEnergiaAnual / 100), 1/12) - 1;
+        const taxaDegradacaoMensal = Math.pow(1 - DEGRADACAO_ANUAL_PAINEL, 1/12) - 1;
 
         // 2. Cálculos da Usina Solar
-        // Consumo Anualizado (para dimensionar kWp)
-        const consumoAnualKwh = consumoMensal * 12;
+        const consumoMensalParaUsina = consumoMensal * potenciaDesejadaDecimal;
+        const potenciaNecessariaKwP = consumoMensalParaUsina / (hsp * DIAS_NO_MES * fatorPerdasDecimal);
 
-        // Potência da Usina Sugerida (kWp) baseada na porcentagem desejada
-        // Ajusta o consumo mensal para a % desejada antes de anualizar
-        const consumoAnualizadoParaUsina = (consumoMensal * potenciaDesejadaDecimal) * 12;
-        const potenciaNecessariaKwP = consumoAnualizadoParaUsina / (hsp * 365 * fatorPerdasDecimal);
+        const numModulos = Math.ceil(potenciaNecessariaKwP * 1000 / MODULO_POWER_WP);
 
-        // Número Estimado de Módulos (com módulos de 570Wp)
-        const numModulos = Math.ceil(potenciaNecessariaKwP * 1000 / MODULO_POWER_WP); // kWp para Wp
+        const geracaoMensalKwhInicial = (numModulos * MODULO_POWER_WP / 1000) * hsp * DIAS_NO_MES * fatorPerdasDecimal;
 
-        // Geração Mensal Estimada real da usina dimensionada (baseada nos módulos inteiros)
-        const geracaoMensalKwh = (numModulos * MODULO_POWER_WP / 1000) * hsp * DIAS_NO_MES * fatorPerdasDecimal;
-
-        // Valor Total do Investimento
         const valorTotalInvestimento = potenciaNecessariaKwP * custoKwP;
 
         // 3. Cálculos Financeiros
-        // Parcela Mensal do Financiamento
         const parcelaFinanciamento = calculatePMT(valorTotalInvestimento, taxaJurosMensal, prazoFinanciamento);
 
-        // Conta de Luz Atual (para comparação)
         const contaAtualEstimada = (consumoMensal * valorKwh) + custoDisponibilidade;
 
-        // Nova Conta de Luz Estimada
-        let consumoDaRede = consumoMensal - geracaoMensalKwh;
-        let novaContaLuzEstimada;
-        if (consumoDaRede <= 0) { // Geração maior ou igual ao consumo
-            novaContaLuzEstimada = custoDisponibilidade;
-        } else { // Geração menor que o consumo, ainda puxa da rede
-            novaContaLuzEstimada = (consumoDaRede * valorKwh) + custoDisponibilidade;
+        let consumoDaRedeMes1 = consumoMensal - geracaoMensalKwhInicial;
+        let novaContaLuzEstimadaMes1;
+        if (consumoDaRedeMes1 <= 0) {
+            novaContaLuzEstimadaMes1 = custoDisponibilidade;
+        } else {
+            novaContaLuzEstimadaMes1 = (consumoDaRedeMes1 * valorKwh) + custoDisponibilidade;
         }
 
-        // Gasto Total Mensal Pós-Solar
-        const gastoTotalPosSolar = novaContaLuzEstimada + parcelaFinanciamento;
+        const gastoTotalPosSolarMes1 = novaContaLuzEstimadaMes1 + parcelaFinanciamento;
 
-        // Economia Imediata Mensal
-        const economiaImediata = contaAtualEstimada - gastoTotalPosSolar;
+        const economiaImediata = contaAtualEstimada - gastoTotalPosSolarMes1;
 
-        // Percentual de Economia Imediata
         const percentualEconomia = (economiaImediata / contaAtualEstimada);
 
 
-        // 4. Exibir Resultados
+        // 4. Projeção de Economia Total
+        let economiaTotalFinanciamento = 0;
+        let economiaTotalVidaUtil = 0;
+
+        let valorKwhProjecao = valorKwh;
+        let geracaoMensalKwhProjecao = geracaoMensalKwhInicial;
+        let custoDisponibilidadeProjecao = custoDisponibilidade;
+
+        for (let mes = 1; mes <= VIDA_UTIL_ANOS * 12; mes++) {
+            const contaSemSolarNoMes = (consumoMensal * valorKwhProjecao) + custoDisponibilidadeProjecao;
+
+            let consumoDaRedeNoMes = consumoMensal - geracaoMensalKwhProjecao;
+            
+            let novaContaLuzNoMes;
+            if (consumoDaRedeNoMes <= 0) {
+                novaContaLuzNoMes = custoDisponibilidadeProjecao;
+            } else {
+                novaContaLuzNoMes = (consumoDaRedeNoMes * valorKwhProjecao) + custoDisponibilidadeProjecao;
+            }
+
+            const parcelaNoMes = (mes <= prazoFinanciamento) ? parcelaFinanciamento : 0;
+
+            const gastoComSolarNoMes = novaContaLuzNoMes + parcelaNoMes;
+
+            const economiaNoMes = contaSemSolarNoMes - gastoComSolarNoMes;
+
+            if (mes <= prazoFinanciamento) {
+                economiaTotalFinanciamento += economiaNoMes;
+            }
+            economiaTotalVidaUtil += economiaNoMes;
+
+            // Atualizar valores para o próximo mês
+            valorKwhProjecao *= (1 + taxaInflacaoEnergiaMensal);
+            custoDisponibilidadeProjecao *= (1 + taxaInflacaoEnergiaMensal);
+            geracaoMensalKwhProjecao *= (1 + taxaDegradacaoMensal);
+        }
+
+
+        // 5. Exibir Resultados
         outPotenciaUsina.textContent = `${potenciaNecessariaKwP.toFixed(2)} kWp`;
         outNumModulos.textContent = `${numModulos} módulos`;
-        outGeracaoMensal.textContent = `${geracaoMensalKwh.toFixed(0)} kWh/mês`;
+        outGeracaoMensal.textContent = `${geracaoMensalKwhInicial.toFixed(0)} kWh/mês`;
         outValorInvestimento.textContent = formatCurrency(valorTotalInvestimento);
         outContaAtual.textContent = formatCurrency(contaAtualEstimada);
         outParcelaFinanciamento.textContent = formatCurrency(parcelaFinanciamento);
-        outNovaContaLuz.textContent = formatCurrency(novaContaLuzEstimada);
-        outGastoTotal.textContent = formatCurrency(gastoTotalPosSolar);
+        outNovaContaLuz.textContent = formatCurrency(novaContaLuzEstimadaMes1);
+        outGastoTotal.textContent = formatCurrency(gastoTotalPosSolarMes1);
         outEconomiaImediata.textContent = formatCurrency(economiaImediata);
         outPercentualEconomia.textContent = formatPercentage(percentualEconomia);
+        
+        outEconomiaTotalFinanciamento.textContent = formatCurrency(economiaTotalFinanciamento);
+        outEconomiaTotalVidaUtil.textContent = formatCurrency(economiaTotalVidaUtil);
 
-        resultadosDiv.classList.remove('hidden'); // Mostra a seção de resultados
+        resultadosDiv.classList.remove('hidden');
     }
 });
