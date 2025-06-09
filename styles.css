@@ -1,0 +1,99 @@
+/* Estilos personalizados para a fonte e alguns ajustes básicos */
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(to bottom right, #3B82F6, #1E3A8A); /* Cores de fundo do body */
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+.container {
+    background-color: #ffffff; /* Fundo branco do container */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); /* Sombra 2xl */
+    border-radius: 0.75rem; /* Bordas arredondadas */
+    padding: 2.5rem; /* Espaçamento interno */
+    width: 100%;
+    max-width: 48rem; /* Largura máxima */
+    transition: all 0.3s ease-in-out; /* Transição suave para transformações */
+}
+/* Responsividade para o container */
+@media (min-width: 768px) {
+    .container {
+        padding: 2rem; /* Espaçamento menor em telas médias */
+    }
+}
+@media (min-width: 1024px) {
+    .container {
+        padding: 2.5rem; /* Espaçamento maior em telas grandes */
+    }
+}
+.input-group label {
+    display: block;
+    font-size: 0.875rem; /* Tamanho de fonte pequeno */
+    font-weight: 600; /* Peso da fonte semi-negrito */
+    color: #4B5563; /* Cor do texto cinza */
+    margin-bottom: 0.25rem; /* Margem inferior pequena */
+}
+.input-group input,
+.input-group select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #D1D5DB; /* Borda cinza */
+    border-radius: 0.375rem; /* Bordas arredondadas */
+    outline: none; /* Remove contorno ao focar */
+    box-shadow: none; /* Remove sombra ao focar */
+    transition: all 0.2s ease-in-out; /* Transição suave */
+}
+.input-group input:focus,
+.input-group select:focus {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); /* Anel de foco azul */
+    border-color: #3B82F6; /* Cor da borda azul ao focar */
+}
+.section-title {
+    font-size: 1.5rem; /* Tamanho de fonte */
+    font-weight: 700; /* Peso da fonte negrito */
+    color: #1E40AF; /* Cor do texto azul escuro */
+    margin-bottom: 1rem; /* Margem inferior */
+    padding-bottom: 0.5rem; /* Espaçamento inferior */
+    border-bottom: 2px solid #BFDBFE; /* Borda inferior */
+}
+/* Responsividade para o título de seção */
+@media (min-width: 768px) {
+    .section-title {
+        font-size: 1.25rem; /* Tamanho de fonte menor em telas médias */
+    }
+}
+.result-box {
+    background-color: #EFF6FF; /* Fundo azul claro */
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #BFDBFE; /* Borda azul clara */
+    color: #1E40AF; /* Cor do texto azul escuro */
+    font-weight: 600; /* Peso da fonte semi-negrito */
+}
+.result-value {
+    color: #1E3A8A; /* Cor do texto azul muito escuro */
+    font-weight: 800; /* Peso da fonte extra-negrito */
+    font-size: 2.25rem; /* Tamanho de fonte grande */
+}
+/* Responsividade para o valor do resultado */
+@media (min-width: 768px) {
+    .result-value {
+        font-size: 1.875rem; /* Tamanho de fonte menor em telas médias */
+    }
+}
+@media (min-width: 1024px) {
+    .result-value {
+        font-size: 2.25rem; /* Tamanho de fonte maior em telas grandes */
+    }
+}
+/* Estilos para remover as setas dos inputs numéricos */
+.numerical-input {
+    -moz-appearance: textfield; /* Para Firefox */
+}
+.numerical-input::-webkit-outer-spin-button,
+.numerical-input::-webkit-inner-spin-button {
+    -webkit-appearance: none; /* Para Chrome, Safari, Edge */
+    margin: 0;
+}
