@@ -8,16 +8,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const hspManualInput = document.getElementById('hspManual');
     const potenciaDesejadaInput = document.getElementById('potenciaDesejada');
     
-    // Novos elementos para a escolha do modo de custo
+    // Elementos para escolha do modo de custo
     const modeKwPRadio = document.getElementById('modeKwP');
     const modeTotalRadio = document.getElementById('modeTotal');
     const inputCustoKwPDiv = document.getElementById('inputCustoKwP');
     const inputValorTotalProjetoDiv = document.getElementById('inputValorTotalProjeto');
 
-    const custoKwPInput = document.getElementById('custoKwP'); // Campo R$/kWp
-    const valorTotalProjetoInput = document.getElementById('valorTotalProjeto'); // Novo campo Valor Total
+    const custoKwPInput = document.getElementById('custoKwP');
+    const valorTotalProjetoInput = document.getElementById('valorTotalProjeto');
 
     const fatorPerdasInput = document.getElementById('fatorPerdas');
+    
+    // Elementos para escolha da forma de pagamento
+    const modeFinancedRadio = document.getElementById('modeFinanced');
+    const modeCashRadio = document.getElementById('modeCash');
+    const financiamentoInputsDiv = document.getElementById('financiamentoInputs'); // O div que contém taxaJuros e prazoFinanciamento
+
     const taxaJurosInput = document.getElementById('taxaJuros');
     const prazoFinanciamentoInput = document.getElementById('prazoFinanciamento');
     const taxaInflacaoEnergiaInput = document.getElementById('taxaInflacaoEnergia');
@@ -70,8 +76,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Função para calcular a parcela do financiamento (PMT)
     const calculatePMT = (principal, monthlyInterestRate, numberOfPayments) => {
-        if (monthlyInterestRate === 0) { // Lidar com juros zero para evitar divisão por zero
-            return principal / numberOfPayments;
+        if (monthlyInterestRate === 0 || numberOfPayments === 0) { // Lidar com juros zero ou prazo zero
+            return principal / numberOfPayments; // Se prazo zero, retorno infinito. No caso de a vista, essa func não é chamada.
         }
         const i = monthlyInterestRate / 100; // Converte para decimal
         const n = numberOfPayments;
@@ -97,6 +103,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // --- Lógica para alternar campos de financiamento (Financiado vs À Vista) ---
+    const updatePaymentModeDisplay = () => {
+        if (modeFinancedRadio.checked) {
+            financiamentoInputsDiv.classList.remove('hidden');
+        } else {
+            financiamentoInputsDiv.classList.add('hidden');
+        }
+    };
+
     // --- Event Listeners ---
 
     // Mostra/esconde o campo HSP Manual quando a localização é "Outra"
@@ -112,11 +127,16 @@ document.addEventListener('DOMContentLoaded', () => {
     modeKwPRadio.addEventListener('change', updateCostInputMode);
     modeTotalRadio.addEventListener('change', updateCostInputMode);
 
+    // Event listeners para os radio buttons de forma de pagamento
+    modeFinancedRadio.addEventListener('change', updatePaymentModeDisplay);
+    modeCashRadio.addEventListener('change', updatePaymentModeDisplay);
+
     // Adiciona o evento de click ao botão de calcular
     calcularBtn.addEventListener('click', calcularEconomia);
 
-    // Chamada inicial para definir o modo de custo ao carregar a página
+    // Chamadas iniciais para definir os modos ao carregar a página
     updateCostInputMode();
+    updatePaymentModeDisplay();
 
     // --- Função Principal de Cálculo ---
     function calcularEconomia() {
@@ -134,8 +154,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const hspManual = hspManualInput.value.replace(',', '.');
         const potenciaDesejadaPercent = parseFloat(potenciaDesejadaInput.value.replace(',', '.'));
         
-        // Coleta o custo com base no modo selecionado
-        let custoKwP = 0; // Valor inicial
+        // Coleta o custo com base no modo selecionado (R$/kWp ou Valor Total)
+        let custoKwP = 0;
         let valorTotalInvestimento = 0;
         
         if (modeKwPRadio.checked) {
@@ -155,9 +175,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const fatorPerdasPercent = parseFloat(fatorPerdasInput.value.replace(',', '.'));
-        const taxaJurosMensal = parseFloat(taxaJurosInput.value.replace(',', '.'));
-        const prazoFinanciamento = parseInt(prazoFinanciamentoInput.value.replace(',', '.'));
         const taxaInflacaoEnergiaAnual = parseFloat(taxaInflacaoEnergiaInput.value.replace(',', '.'));
+
+        // Coleta os dados de financiamento se o modo for "Financiado"
+        const isFinanced = modeFinancedRadio.checked;
+        let taxaJurosMensal = 0;
+        let prazoFinanciamento = 0;
+
+        if (isFinanced) {
+            taxaJurosMensal = parseFloat(taxaJurosInput.value.replace(',', '.'));
+            prazoFinanciamento = parseInt(prazoFinanciamentoInput.value.replace(',', '.'));
+            
+            // Validação de campos de financiamento
+            if (isNaN(taxaJurosMensal) || taxaJurosMensal < 0 ||
+                isNaN(prazoFinanciamento) || prazoFinanciamento <= 0) {
+                errorMessageDiv.classList.remove('hidden');
+                errorTextSpan.textContent = 'Por favor, preencha os dados do financiamento com valores válidos.';
+                return;
+            }
+        }
+
 
         // Validação básica de outros campos
         if (isNaN(consumoMensal) || consumoMensal <= 0 ||
@@ -165,8 +202,6 @@ document.addEventListener('DOMContentLoaded', () => {
             isNaN(custoDisponibilidade) || custoDisponibilidade < 0 ||
             isNaN(potenciaDesejadaPercent) || potenciaDesejadaPercent <= 0 || potenciaDesejadaPercent > 100 ||
             isNaN(fatorPerdasPercent) || fatorPerdasPercent < 0 || fatorPerdasPercent >= 100 ||
-            isNaN(taxaJurosMensal) || taxaJurosMensal < 0 ||
-            isNaN(prazoFinanciamento) || prazoFinanciamento <= 0 ||
             isNaN(taxaInflacaoEnergiaAnual) || taxaInflacaoEnergiaAnual < 0) {
             errorMessageDiv.classList.remove('hidden');
             errorTextSpan.textContent = 'Por favor, preencha todos os campos com valores válidos e positivos.';
@@ -194,20 +229,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const numModulos = Math.ceil(potenciaNecessariaKwP * 1000 / MODULO_POWER_WP);
 
-        // Geração Mensal Estimada real da usina dimensionada (baseada nos módulos inteiros)
         const geracaoMensalKwhInicial = (numModulos * MODULO_POWER_WP / 1000) * hsp * DIAS_NO_MES * fatorPerdasDecimal;
 
-        // Se o modo for R$/kWp, calcula o valor total do investimento
+        // Se o modo de custo for R$/kWp, calcula o valor total do investimento a partir dele
         if (modeKwPRadio.checked) {
             valorTotalInvestimento = potenciaNecessariaKwP * custoKwP;
-        } else { // Se o modo for Valor Total do Projeto, calcula o R$/kWp a partir dele
-            custoKwP = valorTotalInvestimento / potenciaNecessariaKwP; // Calcula o R$/kWp para exibir se o modo total foi escolhido
-        }
-
+        } 
+        // Se o modo for Valor Total do Projeto, o valorTotalInvestimento já foi coletado.
 
         // 3. Cálculos Financeiros
-        const parcelaFinanciamento = calculatePMT(valorTotalInvestimento, taxaJurosMensal, prazoFinanciamento);
-
+        let parcelaFinanciamento = 0;
+        if (isFinanced) {
+            parcelaFinanciamento = calculatePMT(valorTotalInvestimento, taxaJurosMensal, prazoFinanciamento);
+        }
+        
         const contaAtualEstimada = (consumoMensal * valorKwh) + custoDisponibilidade;
 
         let consumoDaRedeMes1 = consumoMensal - geracaoMensalKwhInicial;
@@ -226,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         // 4. Projeção de Economia Total
-        let economiaTotalFinanciamento = 0;
+        let economiaTotalFinanciamentoPeriodo = 0; // Usar essa variável para o total durante o período de financiamento
         let economiaTotalVidaUtil = 0;
 
         let valorKwhProjecao = valorKwh;
@@ -245,14 +280,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 novaContaLuzNoMes = (consumoDaRedeNoMes * valorKwhProjecao) + custoDisponibilidadeProjecao;
             }
 
-            const parcelaNoMes = (mes <= prazoFinanciamento) ? parcelaFinanciamento : 0;
+            const parcelaNoMes = (isFinanced && mes <= prazoFinanciamento) ? parcelaFinanciamento : 0;
 
             const gastoComSolarNoMes = novaContaLuzNoMes + parcelaNoMes;
 
             const economiaNoMes = contaSemSolarNoMes - gastoComSolarNoMes;
 
-            if (mes <= prazoFinanciamento) {
-                economiaTotalFinanciamento += economiaNoMes;
+            if (mes <= prazoFinanciamento) { // Acumula economia durante o período que o financiamento duraria (ou é à vista)
+                economiaTotalFinanciamentoPeriodo += economiaNoMes;
             }
             economiaTotalVidaUtil += economiaNoMes;
 
@@ -269,13 +304,17 @@ document.addEventListener('DOMContentLoaded', () => {
         outGeracaoMensal.textContent = `${geracaoMensalKwhInicial.toFixed(0)} kWh/mês`;
         outValorInvestimento.textContent = formatCurrency(valorTotalInvestimento);
         outContaAtual.textContent = formatCurrency(contaAtualEstimada);
-        outParcelaFinanciamento.textContent = formatCurrency(parcelaFinanciamento);
+        
+        // Exibe "À Vista" ou a parcela
+        outParcelaFinanciamento.textContent = isFinanced ? formatCurrency(parcelaFinanciamento) : 'À Vista'; 
+
         outNovaContaLuz.textContent = formatCurrency(novaContaLuzEstimadaMes1);
         outGastoTotal.textContent = formatCurrency(gastoTotalPosSolarMes1);
         outEconomiaImediata.textContent = formatCurrency(economiaImediata);
         outPercentualEconomia.textContent = formatPercentage(percentualEconomia);
         
-        outEconomiaTotalFinanciamento.textContent = formatCurrency(economiaTotalFinanciamento);
+        // Exibe economia total do período de financiamento (mesmo se for à vista, é o período de comparação)
+        outEconomiaTotalFinanciamento.textContent = formatCurrency(economiaTotalFinanciamentoPeriodo); 
         outEconomiaTotalVidaUtil.textContent = formatCurrency(economiaTotalVidaUtil);
 
         resultadosDiv.classList.remove('hidden');

@@ -96,7 +96,24 @@
         <!-- Seção de Dados do Financiamento -->
         <div class="p-6 bg-blue-50 rounded-lg shadow-inner mt-8">
             <h2 class="section-title">Dados do Financiamento</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <!-- Nova seção para escolha da forma de pagamento -->
+            <div class="input-group mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Forma de Pagamento:</label>
+                <div class="flex space-x-4">
+                    <label class="inline-flex items-center">
+                        <input type="radio" class="form-radio text-blue-600" name="paymentMode" value="financed" id="modeFinanced" checked>
+                        <span class="ml-2 text-gray-700">Financiado</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" class="form-radio text-blue-600" name="paymentMode" value="cash" id="modeCash">
+                        <span class="ml-2 text-gray-700">À Vista</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Grupo de inputs do financiamento (visível por padrão) -->
+            <div id="financiamentoInputs" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="input-group mb-4 md:mb-0">
                     <label for="taxaJuros">Taxa de Juros Mensal (%):</label>
                     <input type="number" id="taxaJuros" step="0.01" placeholder="Ex: 0.99 (para 0.99%)" class="numerical-input" value="0.99">
@@ -105,10 +122,10 @@
                     <label for="prazoFinanciamento">Prazo do Financiamento (meses):</label>
                     <input type="number" id="prazoFinanciamento" placeholder="Ex: 60" class="numerical-input" value="60">
                 </div>
-                <div class="input-group">
-                    <label for="taxaInflacaoEnergia">Inflação da Energia (% ao ano):</label>
-                    <input type="number" id="taxaInflacaoEnergia" step="0.01" placeholder="Ex: 5.00" class="numerical-input" value="5.00">
-                </div>
+            </div>
+            <div class="input-group mt-4"> <!-- Inflação da energia fora do grid de juros/prazo -->
+                <label for="taxaInflacaoEnergia">Inflação da Energia (% ao ano):</label>
+                <input type="number" id="taxaInflacaoEnergia" step="0.01" placeholder="Ex: 5.00" class="numerical-input" value="5.00">
             </div>
         </div>
 
