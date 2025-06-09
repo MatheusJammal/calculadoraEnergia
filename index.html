@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora de Economia Solar L8 Energy</title>
+    <!-- Inclui o Tailwind CSS para estilização rápida e responsiva -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     
+    <!-- Link para o arquivo CSS externo -->
     <link rel="stylesheet" href="styles.css"> 
 </head>
 <body>
@@ -16,7 +18,9 @@
             <span class="block text-xl md:text-2xl text-blue-600 mt-2">L8 Energy</span>
         </h1>
 
+        <!-- Seções de Dados do Cliente e Sistema Solar - Em layout de Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Seção de Dados do Cliente -->
             <div class="p-6 bg-gray-50 rounded-lg shadow-inner">
                 <h2 class="section-title">Dados do Cliente</h2>
                 <div class="input-group mb-4">
@@ -33,6 +37,7 @@
                 </div>
             </div>
 
+            <!-- Seção de Dados do Sistema Solar -->
             <div class="p-6 bg-yellow-50 rounded-lg shadow-inner">
                 <h2 class="section-title">Dados do Sistema Solar</h2>
                 <div class="input-group mb-4">
@@ -53,10 +58,34 @@
                     <label for="potenciaDesejada">Potência Desejada da Usina (% do Consumo Mensal):</label>
                     <input type="number" id="potenciaDesejada" placeholder="Ex: 100 (para atender 100% do consumo)" class="numerical-input" value="100">
                 </div>
+
+                <!-- Nova seção para escolha do modo de custo -->
                 <div class="input-group mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Como informar o custo?</label>
+                    <div class="flex space-x-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" class="form-radio text-blue-600" name="custoMode" value="kWp" id="modeKwP" checked>
+                            <span class="ml-2 text-gray-700">Por R$/kWp</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" class="form-radio text-blue-600" name="custoMode" value="total" id="modeTotal">
+                            <span class="ml-2 text-gray-700">Valor Total do Projeto</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Campo para Custo por kWp (visível por padrão) -->
+                <div class="input-group mb-4" id="inputCustoKwP">
                     <label for="custoKwP">Custo de Instalação (R$/kWp):</label>
                     <input type="number" id="custoKwP" step="0.01" placeholder="Ex: 4500.00" class="numerical-input" value="4500.00">
                 </div>
+
+                <!-- Campo para Valor Total do Projeto (inicialmente escondido) -->
+                <div class="input-group mb-4 hidden" id="inputValorTotalProjeto">
+                    <label for="valorTotalProjeto">Valor Total do Projeto (R$):</label>
+                    <input type="number" id="valorTotalProjeto" step="0.01" placeholder="Ex: 69000.00" class="numerical-input">
+                </div>
+
                 <div class="input-group mb-4">
                     <label for="fatorPerdas">Fator de Perdas do Sistema (%):</label>
                     <input type="number" id="fatorPerdas" step="0.1" placeholder="Ex: 20 (para 20%)" class="numerical-input" value="20">
@@ -64,6 +93,7 @@
             </div>
         </div>
 
+        <!-- Seção de Dados do Financiamento -->
         <div class="p-6 bg-blue-50 rounded-lg shadow-inner mt-8">
             <h2 class="section-title">Dados do Financiamento</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -86,10 +116,12 @@
             Calcular Economia
         </button>
 
+        <!-- Seção de Resultados -->
         <div id="resultados" class="mt-10 p-6 bg-green-50 rounded-lg shadow-xl border-t-4 border-green-400 hidden">
             <h2 class="section-title text-green-800">Resultados da Economia Solar</h2>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Visão Geral do Projeto -->
                 <div class="bg-white p-4 rounded-lg shadow border border-green-200">
                     <h3 class="text-lg font-semibold text-green-700 mb-2">Visão Geral do Projeto</h3>
                     <p>Potência da Usina Sugerida: <span id="outPotenciaUsina" class="font-bold"></span></p>
@@ -98,6 +130,7 @@
                     <p>Valor Total do Investimento: <span id="outValorInvestimento" class="font-bold"></span></p>
                 </div>
 
+                <!-- Impacto Financeiro Mensal -->
                 <div class="bg-white p-4 rounded-lg shadow border border-green-200">
                     <h3 class="text-lg font-semibold text-green-700 mb-2">Impacto Financeiro Mensal</h3>
                     <p>Sua Conta de Luz Atual (estimada): <span id="outContaAtual" class="font-bold text-red-600"></span></p>
@@ -107,12 +140,14 @@
                 </div>
             </div>
 
+            <!-- A Grande Economia -->
             <div class="mt-6 p-4 rounded-lg text-center bg-green-600 text-white shadow-lg">
                 <h3 class="text-xl font-bold mb-2">Sua Economia Imediata Mensal:</h3>
                 <p class="result-value text-white">R$ <span id="outEconomiaImediata" class="result-value"></span></p>
                 <p class="text-lg mt-2">Isso representa uma economia de <span id="outPercentualEconomia" class="font-extrabold text-xl"></span> sobre sua conta atual!</p>
             </div>
 
+            <!-- Projeção de Economia Total -->
             <div class="mt-6 p-4 rounded-lg text-center bg-blue-600 text-white shadow-lg">
                 <h3 class="text-xl font-bold mb-2">Projeção de Economia Total:</h3>
                 <p class="text-lg mb-1">Durante o Prazo do Financiamento: <span id="outEconomiaTotalFinanciamento" class="font-extrabold text-xl"></span></p>
@@ -126,6 +161,7 @@
         </div>
     </div>
 
+    <!-- O JavaScript virá aqui. Em um projeto real, seria um arquivo 'script.js' -->
     <script src="script.js"></script> 
 </body>
 </html>

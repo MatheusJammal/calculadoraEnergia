@@ -7,7 +7,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const hspInputGroup = document.getElementById('hspInputGroup');
     const hspManualInput = document.getElementById('hspManual');
     const potenciaDesejadaInput = document.getElementById('potenciaDesejada');
-    const custoKwPInput = document.getElementById('custoKwP');
+    
+    // Novos elementos para a escolha do modo de custo
+    const modeKwPRadio = document.getElementById('modeKwP');
+    const modeTotalRadio = document.getElementById('modeTotal');
+    const inputCustoKwPDiv = document.getElementById('inputCustoKwP');
+    const inputValorTotalProjetoDiv = document.getElementById('inputValorTotalProjeto');
+
+    const custoKwPInput = document.getElementById('custoKwP'); // Campo R$/kWp
+    const valorTotalProjetoInput = document.getElementById('valorTotalProjeto'); // Novo campo Valor Total
+
     const fatorPerdasInput = document.getElementById('fatorPerdas');
     const taxaJurosInput = document.getElementById('taxaJuros');
     const prazoFinanciamentoInput = document.getElementById('prazoFinanciamento');
@@ -77,6 +86,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return hspData[location];
     };
 
+    // --- Lógica para alternar campos de custo (R$/kWp vs Valor Total) ---
+    const updateCostInputMode = () => {
+        if (modeKwPRadio.checked) {
+            inputCustoKwPDiv.classList.remove('hidden');
+            inputValorTotalProjetoDiv.classList.add('hidden');
+        } else {
+            inputCustoKwPDiv.classList.add('hidden');
+            inputValorTotalProjetoDiv.classList.remove('hidden');
+        }
+    };
+
     // --- Event Listeners ---
 
     // Mostra/esconde o campo HSP Manual quando a localização é "Outra"
@@ -88,8 +108,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Event listeners para os radio buttons de modo de custo
+    modeKwPRadio.addEventListener('change', updateCostInputMode);
+    modeTotalRadio.addEventListener('change', updateCostInputMode);
+
     // Adiciona o evento de click ao botão de calcular
     calcularBtn.addEventListener('click', calcularEconomia);
+
+    // Chamada inicial para definir o modo de custo ao carregar a página
+    updateCostInputMode();
 
     // --- Função Principal de Cálculo ---
     function calcularEconomia() {
@@ -106,18 +133,37 @@ document.addEventListener('DOMContentLoaded', () => {
         const localizacao = localizacaoSelect.value;
         const hspManual = hspManualInput.value.replace(',', '.');
         const potenciaDesejadaPercent = parseFloat(potenciaDesejadaInput.value.replace(',', '.'));
-        const custoKwP = parseFloat(custoKwPInput.value.replace(',', '.'));
+        
+        // Coleta o custo com base no modo selecionado
+        let custoKwP = 0; // Valor inicial
+        let valorTotalInvestimento = 0;
+        
+        if (modeKwPRadio.checked) {
+            custoKwP = parseFloat(custoKwPInput.value.replace(',', '.'));
+            if (isNaN(custoKwP) || custoKwP <= 0) {
+                errorMessageDiv.classList.remove('hidden');
+                errorTextSpan.textContent = 'Por favor, preencha o Custo de Instalação (R$/kWp) com um valor válido.';
+                return;
+            }
+        } else { // modeTotalRadio.checked
+            valorTotalInvestimento = parseFloat(valorTotalProjetoInput.value.replace(',', '.'));
+            if (isNaN(valorTotalInvestimento) || valorTotalInvestimento <= 0) {
+                errorMessageDiv.classList.remove('hidden');
+                errorTextSpan.textContent = 'Por favor, preencha o Valor Total do Projeto com um valor válido.';
+                return;
+            }
+        }
+
         const fatorPerdasPercent = parseFloat(fatorPerdasInput.value.replace(',', '.'));
         const taxaJurosMensal = parseFloat(taxaJurosInput.value.replace(',', '.'));
         const prazoFinanciamento = parseInt(prazoFinanciamentoInput.value.replace(',', '.'));
         const taxaInflacaoEnergiaAnual = parseFloat(taxaInflacaoEnergiaInput.value.replace(',', '.'));
 
-        // Validação básica
+        // Validação básica de outros campos
         if (isNaN(consumoMensal) || consumoMensal <= 0 ||
             isNaN(valorKwh) || valorKwh <= 0 ||
             isNaN(custoDisponibilidade) || custoDisponibilidade < 0 ||
             isNaN(potenciaDesejadaPercent) || potenciaDesejadaPercent <= 0 || potenciaDesejadaPercent > 100 ||
-            isNaN(custoKwP) || custoKwP <= 0 ||
             isNaN(fatorPerdasPercent) || fatorPerdasPercent < 0 || fatorPerdasPercent >= 100 ||
             isNaN(taxaJurosMensal) || taxaJurosMensal < 0 ||
             isNaN(prazoFinanciamento) || prazoFinanciamento <= 0 ||
@@ -148,9 +194,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const numModulos = Math.ceil(potenciaNecessariaKwP * 1000 / MODULO_POWER_WP);
 
+        // Geração Mensal Estimada real da usina dimensionada (baseada nos módulos inteiros)
         const geracaoMensalKwhInicial = (numModulos * MODULO_POWER_WP / 1000) * hsp * DIAS_NO_MES * fatorPerdasDecimal;
 
-        const valorTotalInvestimento = potenciaNecessariaKwP * custoKwP;
+        // Se o modo for R$/kWp, calcula o valor total do investimento
+        if (modeKwPRadio.checked) {
+            valorTotalInvestimento = potenciaNecessariaKwP * custoKwP;
+        } else { // Se o modo for Valor Total do Projeto, calcula o R$/kWp a partir dele
+            custoKwP = valorTotalInvestimento / potenciaNecessariaKwP; // Calcula o R$/kWp para exibir se o modo total foi escolhido
+        }
+
 
         // 3. Cálculos Financeiros
         const parcelaFinanciamento = calculatePMT(valorTotalInvestimento, taxaJurosMensal, prazoFinanciamento);
@@ -203,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             economiaTotalVidaUtil += economiaNoMes;
 
-            // Atualizar valores para o próximo mês
+            // Atualizar valores para o próximo mês (inflação e degradação)
             valorKwhProjecao *= (1 + taxaInflacaoEnergiaMensal);
             custoDisponibilidadeProjecao *= (1 + taxaInflacaoEnergiaMensal);
             geracaoMensalKwhProjecao *= (1 + taxaDegradacaoMensal);
